@@ -6,15 +6,17 @@ Página com foto do carro, número a R$ 50,00, valor da cirurgia de R$ 150.000,0
 
 O visitante escolhe a quantidade e clica em Pagar com InfinitePay. A função Vercel `api/checkout.js` gera o checkout pela API oficial e a página redireciona para a URL retornada. Não é necessário cadastrar links fixos.
 
-A função reutiliza `INFINITEPAY_HANDLE` das variáveis da hospedagem. Aceita a InfiniteTag com ou sem `$` inicial. Alternativamente, preencha `infiniteTag` em `api/_lib/config.js`. O valor real não foi encontrado nos arquivos nem no histórico disponível; nenhum recebedor foi presumido.
+A conta recebedora confirmada é `$thiago_beautynorte`, definida em `api/_lib/config.js`. Esta configuração explícita é usada mesmo que a hospedagem contenha uma variável antiga de outra conta.
 
-O preço é fixado no servidor em 5000 centavos por número. A API aceita as quantidades 1, 5, 10, 20 e 50 e ignora preço/recebedor enviados pelo navegador. Há proteção contra clique repetido durante a requisição, tratamento de erro e limite de espera.
+O visitante digita uma quantidade inteira positiva ou usa os botões +/− e os atalhos. O total é atualizado automaticamente. Campos vazios, zero, negativos, frações e valores que ultrapassem a precisão monetária segura são rejeitados no navegador e no servidor. A quantidade não fica limitada aos atalhos 1, 5, 10, 20 e 50.
+
+O preço permanece fixado no servidor em 5000 centavos por número. Preço e recebedor enviados pelo visitante são ignorados. Durante a requisição, os controles ficam bloqueados para evitar cliques repetidos.
 
 ## Publicação
 
 Hospede o repositório na Vercel, com suporte a funções Node.js em `api/`. Use preset Other, sem comando de build e diretório de saída na raiz. Uma hospedagem puramente estática não executa `/api/checkout`.
 
-Habilite Checkout Integrado na conta InfinitePay. Se `INFINITEPAY_HANDLE` já estiver configurada no projeto, ela será reutilizada. A integração segue https://www.infinitepay.io/checkout-documentacao.
+Habilite Checkout Integrado na conta InfinitePay. A integração segue https://www.infinitepay.io/checkout-documentacao.
 
 ## Escopo
 

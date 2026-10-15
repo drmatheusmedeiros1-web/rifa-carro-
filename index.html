@@ -38,6 +38,11 @@
 .ticket button:disabled{opacity:1;cursor:wait}
 .ticket input::placeholder{color:#444444;opacity:1}
 .preview-label{color:#000000;background:#efe3bf}
+.quantity-control{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:10px;align-items:center;margin-top:8px}
+.ticket .quantity-control input{text-align:center;font-size:20px;font-weight:bold;min-height:48px}
+.ticket .quantity-control button{font-size:24px;min-height:48px;background:#f6edcf;color:#000}
+.ticket button:disabled{cursor:not-allowed}
+.ticket #quantity-error{margin:6px 0;min-height:0}
 </style>
 </head>
 <body>
@@ -52,7 +57,14 @@
 </header>
 <section class="divider" aria-labelledby="participar">
 <h3 id="participar">Escolha seus números</h3>
-<p class="muted">Selecione a quantidade com que deseja participar.</p>
+<p class="muted">Digite a quantidade desejada ou use os atalhos abaixo.</p>
+<label for="quantity">Quantidade de números</label>
+<div class="quantity-control">
+<button class="choice" type="button" id="decrease" aria-label="Diminuir quantidade">−</button>
+<input id="quantity" type="number" inputmode="numeric" min="1" step="1" value="1" required aria-describedby="quantity-error">
+<button class="choice" type="button" id="increase" aria-label="Aumentar quantidade">+</button>
+</div>
+<p id="quantity-error" class="status" aria-live="polite"></p>
 <div class="choices" role="group" aria-label="Quantidade de números">
 <button class="choice" type="button" data-qty="1" aria-pressed="true">1</button>
 <button class="choice" type="button" data-qty="5" aria-pressed="false">5</button>
@@ -86,22 +98,47 @@
 const root=document.getElementById('rifa-preview');
 const price=50;
 let quantity=1;
+const quantityInput=root.querySelector('#quantity');
+const quantityError=root.querySelector('#quantity-error');
+const minus=root.querySelector('#decrease');
+const plus=root.querySelector('#increase');
+function readQuantity(){
+const raw=quantityInput.value.trim();
+const value=Number(raw);
+return /^\d+$/.test(raw) && Number.isSafeInteger(value) && value>=1 && Number.isSafeInteger(value*5000) ? value : null;
+}
+function syncQuantity(){
+quantity=readQuantity();
+const valid=quantity!==null;
+quantityInput.setAttribute('aria-invalid',String(!valid));
+quantityError.textContent=valid?'':'Informe uma quantidade inteira, a partir de 1.';
+root.querySelector('#total').textContent=valid?(quantity*price).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'—';
+root.querySelector('#pay').disabled=!valid;
+minus.disabled=!valid || quantity<=1;
+plus.disabled=!valid || !Number.isSafeInteger((quantity+1)*5000);
+root.querySelectorAll('[data-qty]').forEach(button=>button.setAttribute('aria-pressed',String(valid && Number(button.dataset.qty)===quantity)));
+return valid;
+}
+quantityInput.addEventListener('input',syncQuantity);
+minus.addEventListener('click',()=>{if(readQuantity()>1){quantityInput.value=String(readQuantity()-1);syncQuantity();}});
+plus.addEventListener('click',()=>{const current=readQuantity();if(current!==null && Number.isSafeInteger((current+1)*5000)){quantityInput.value=String(current+1);syncQuantity();}});
 root.querySelectorAll('[data-qty]').forEach(button=>button.addEventListener('click',()=>{
-root.querySelectorAll('[data-qty]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
-quantity=Number(button.dataset.qty);
-root.querySelector('#total').textContent=(quantity*price).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+quantityInput.value=button.dataset.qty;
+syncQuantity();
 }));
+syncQuantity();
 let pending=false;
 const payButton=root.querySelector('#pay');
 const paymentStatus=root.querySelector('#payment-status');
 payButton.addEventListener('click',async()=>{
-if(pending) return;
+if(pending || !syncQuantity()) return;
 pending=true;
 payButton.disabled=true;
 payButton.setAttribute('aria-busy','true');
 payButton.textContent='Abrindo checkout…';
 paymentStatus.textContent='';
 root.querySelectorAll('[data-qty]').forEach(button=>button.disabled=true);
+quantityInput.disabled=true;minus.disabled=true;plus.disabled=true;
 try {
 const response=await fetch('/api/checkout',{
 method:'POST',headers:{'Content-Type':'application/json'},
@@ -121,6 +158,7 @@ payButton.disabled=false;
 payButton.removeAttribute('aria-busy');
 payButton.textContent='Pagar com InfinitePay';
 root.querySelectorAll('[data-qty]').forEach(button=>button.disabled=false);
+quantityInput.disabled=false;syncQuantity();
 }
 });
 root.querySelector('#copy').addEventListener('click',async()=>{

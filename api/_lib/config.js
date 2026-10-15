@@ -1,8 +1,10 @@
-// Reutiliza a InfiniteTag configurada na hospedagem (com ou sem o $ inicial).
-// Se preferir configurar no código, preencha infiniteTag com o identificador real.
-const infiniteTag = '';
+// Conta recebedora confirmada pelo organizador: $thiago_beautynorte.
+// A conta é definida no servidor e não pode ser alterada pelo visitante.
+const infiniteTag = 'thiago_beautynorte';
 export function getInfinitePayHandle() {
-  return (process.env.INFINITEPAY_HANDLE || infiniteTag).trim().replace(/^\$/, '');
+  return infiniteTag;
 }
 export const PRICE_CENTS = 5000;
-export const QUANTITIES = [1, 5, 10, 20, 50];
+export function isValidQuantity(quantity) {
+  return Number.isSafeInteger(quantity) && quantity >= 1 && Number.isSafeInteger(quantity * PRICE_CENTS);
+}

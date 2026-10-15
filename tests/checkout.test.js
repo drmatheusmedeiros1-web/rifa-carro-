@@ -22,10 +22,10 @@ test('checkout envia quantidades com R$ 50 por número e recebedor do servidor',
     payload=JSON.parse(options.body);
     return {ok:true,json:async()=>({url:'https://checkout.infinitepay.com.br/pedido-teste'})};
   });
-  for(const quantity of [1,5,10,20,50]){
+  for(const quantity of [1,2,3,7,13,51,125]){
     const res=await call({quantity,price:1,handle:'outro-recebedor'});
     assert.equal(res.code,200);
-    assert.equal(payload.handle,'recebedor-teste');
+    assert.equal(payload.handle,'thiago_beautynorte');
     assert.equal(payload.items[0].price,5000);
     assert.equal(payload.items[0].quantity,quantity);
     assert.match(payload.order_nsu,/^[0-9a-f-]{36}$/);
@@ -33,16 +33,21 @@ test('checkout envia quantidades com R$ 50 por número e recebedor do servidor',
 });
 test('quantidades inválidas, JSON quebrado e método GET não chamam o provedor',async t=>{
   const fetch=t.mock.method(globalThis,'fetch',()=>{throw Error('não deveria chamar')});
-  for(const quantity of [0,-1,2,1.5,'1',null,100000])assert.equal((await call({quantity})).code,400);
+  for(const quantity of [0,-1,1.5,'1',null,Number.MAX_SAFE_INTEGER])assert.equal((await call({quantity})).code,400);
   assert.equal((await call('{')).code,400);
   assert.equal((await call({},'GET')).code,405);
   assert.equal(fetch.mock.callCount(),0);
 });
-test('sem InfiniteTag retorna indisponibilidade sem gerar cobrança',async t=>{
-  setHandle(t,'');
-  const fetch=t.mock.method(globalThis,'fetch',()=>{throw Error('não deveria chamar')});
-  assert.equal((await call({quantity:1})).code,503);
-  assert.equal(fetch.mock.callCount(),0);
+test('conta confirmada é usada mesmo com variável antiga da hospedagem',async t=>{
+  setHandle(t,'conta-antiga');
+  let payload;
+  t.mock.method(globalThis,'fetch',async (url,options)=>{
+    payload=JSON.parse(options.body);
+    return {ok:true,json:async()=>({url:'https://checkout.infinitepay.io/test'})};
+  });
+  assert.equal((await call({quantity:7,handle:'conta-visitante'})).code,200);
+  assert.equal(payload.handle,'thiago_beautynorte');
+  assert.equal(payload.items[0].quantity*payload.items[0].price,35000);
 });
 test('erros, timeout e resposta inválida do provedor são tratados',async t=>{
   setHandle(t,'recebedor-teste');

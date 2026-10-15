@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { getInfinitePayHandle, PRICE_CENTS, QUANTITIES } from './_lib/config.js';
+import { getInfinitePayHandle, PRICE_CENTS, isValidQuantity } from './_lib/config.js';
 
 export function isCheckoutUrl(value) {
   try {
@@ -20,7 +20,7 @@ export default async function checkout(req, res) {
   try { body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body; }
   catch { return res.status(400).json({ error: 'Pedido inválido.' }); }
   const quantity = body?.quantity;
-  if (!Number.isInteger(quantity) || !QUANTITIES.includes(quantity)) {
+  if (!isValidQuantity(quantity)) {
     return res.status(400).json({ error: 'Selecione uma quantidade válida.' });
   }
   const handle = getInfinitePayHandle();
