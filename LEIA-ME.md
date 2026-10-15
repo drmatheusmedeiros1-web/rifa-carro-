@@ -1,23 +1,29 @@
 # Rifa Solidária — Ford New Fiesta
 
-Página estática em `index.html`, com foto do carro, número a R$ 50,00, valor da cirurgia de R$ 150.000,00, anúncio do iPhone 17 Pro Max 256 GB aos 40% e Pix solidário.
+Página com foto do carro, número a R$ 50,00, valor da cirurgia de R$ 150.000,00, anúncio do iPhone 17 Pro Max 256 GB aos 40% e Pix solidário. Textos pretos sobre fundos claros, inclusive botões e seleção de quantidade.
+
+## Checkout automático da InfinitePay
+
+O visitante escolhe a quantidade e clica em Pagar com InfinitePay. A função Vercel `api/checkout.js` gera o checkout pela API oficial e a página redireciona para a URL retornada. Não é necessário cadastrar links fixos.
+
+A função reutiliza `INFINITEPAY_HANDLE` das variáveis da hospedagem. Aceita a InfiniteTag com ou sem `$` inicial. Alternativamente, preencha `infiniteTag` em `api/_lib/config.js`. O valor real não foi encontrado nos arquivos nem no histórico disponível; nenhum recebedor foi presumido.
+
+O preço é fixado no servidor em 5000 centavos por número. A API aceita as quantidades 1, 5, 10, 20 e 50 e ignora preço/recebedor enviados pelo navegador. Há proteção contra clique repetido durante a requisição, tratamento de erro e limite de espera.
 
 ## Publicação
 
-Importe este repositório na Vercel como site estático, sem comando de build e com a raiz como diretório de saída. A página não precisa de banco de dados.
+Hospede o repositório na Vercel, com suporte a funções Node.js em `api/`. Use preset Other, sem comando de build e diretório de saída na raiz. Uma hospedagem puramente estática não executa `/api/checkout`.
 
-## Checkout externo da InfinitePay
+Habilite Checkout Integrado na conta InfinitePay. Se `INFINITEPAY_HANDLE` já estiver configurada no projeto, ela será reutilizada. A integração segue https://www.infinitepay.io/checkout-documentacao.
 
-Configure `checkout-config.js` com os links reais da InfinitePay para cada quantidade e total. O endereço do checkout não foi fornecido e não constava no repositório original. Enquanto não houver link válido, a página informa a indisponibilidade e não cria cobranças.
+## Escopo
 
-Um link de valor fixo não muda de preço com a seleção na página: cada link deve ter o total correspondente na InfinitePay. Os dados do comprador serão informados no checkout externo, não nesta página.
-
-Este repositório não contém API, webhook, painel do organizador, distribuição de números nem confirmação automática de pagamento. As instruções antigas citavam arquivos que não estavam presentes. A implementação desses recursos não faz parte desta alteração.
+Este código abre o checkout externo. Não implementa emissão de números, apuração de progresso, painel ou confirmação automática por webhook. Não há teste de transação real sem a conta e hospedagem confirmadas.
 
 ## Pix solidário
 
-Chave: `9518174b-547d-4b43-abdd-77111163d5d4`. Botão de cópia com alternativa de seleção manual. A transferência ocorre no aplicativo do banco, com valor livre. Doações não geram números da rifa.
+Chave: `9518174b-547d-4b43-abdd-77111163d5d4`. O botão copia a chave; em navegadores sem permissão, seleciona o texto para cópia manual. A doação tem valor livre e não gera números da rifa.
 
-## Prévia
+## Verificação
 
-`preview/index.html` permite revisar o visual e os cálculos sem redirecionar para pagamentos.
+Execute `node --test tests/checkout.test.js`. Os testes simulam a InfinitePay, sem criar cobranças. `preview/index.html` permite revisar o visual sem abrir pagamentos.

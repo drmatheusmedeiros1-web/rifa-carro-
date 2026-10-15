@@ -1,7 +1,5 @@
-# Prévia da rifa
+# Prévia
 
-Abra index.html para revisar foto, textos, seleção de quantidades e Pix solidário. O checkout é externo; os links reais precisam ser preenchidos em /checkout-config.js para habilitar o botão na página principal /index.html.
+Abra index.html para revisar os textos pretos, foto, valores, quantidades e Pix solidário. Esta prévia não abre pagamentos.
 
-A página principal está na raiz do repositório. Esta pasta mantém uma prévia sem redirecionamento de pagamento. Não há backend de emissão de números ou confirmação automática de pagamento neste repositório.
-
-Contraste: textos normais e pequenos pelo menos 4,5:1; contornos de campos e botões pelo menos 3:1; cores explícitas em títulos, campos, placeholders, botões e chave Pix, com esquema claro fixo.
+A página real está em /index.html e chama /api/checkout. O checkout é gerado automaticamente com a InfiniteTag configurada em INFINITEPAY_HANDLE na hospedagem ou em api/_lib/config.js.
