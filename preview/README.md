@@ -1,9 +1,7 @@
-# Prévia das alterações da rifa
+# Prévia da rifa
 
-Abra `index.html` em um navegador. Esta pasta reproduz o visual dos prints enviados, pois a branch main original contém somente LEIA-ME.md e package.json: a página e a pasta api descritas no README não estão no repositório.
+Abra index.html para revisar foto, textos, seleção de quantidades e Pix solidário. O checkout é externo; os links reais precisam ser preenchidos em /checkout-config.js para habilitar o botão na página principal /index.html.
 
-Inclui foto enviada, número a R$ 50,00, valor da cirurgia a R$ 150.000,00, anúncio do iPhone 17 Pro Max 256 GB ao atingir 40% e chave do Pix solidário com botão para copiar.
+A página principal está na raiz do repositório. Esta pasta mantém uma prévia sem redirecionamento de pagamento. Não há backend de emissão de números ou confirmação automática de pagamento neste repositório.
 
-O seletor calcula 1, 5, 10, 20 e 50 números. O botão InfinitePay apenas informa que se trata de uma prévia: não cria pedidos, não cobra e não confirma pagamentos. O Pix solidário é uma doação separada, sem emissão de números.
-
-Para aplicar ao site real, recuperar o código original da página e do backend e atualizar também a configuração do preço no servidor/checkout. Esta prévia não muda o backend nem os valores configurados na Vercel.
+Contraste: textos normais e pequenos pelo menos 4,5:1; contornos de campos e botões pelo menos 3:1; cores explícitas em títulos, campos, placeholders, botões e chave Pix, com esquema claro fixo.
