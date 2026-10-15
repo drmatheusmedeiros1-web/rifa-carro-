@@ -1,0 +1,7 @@
+tests
+scripts
+.env*
+LEIA-ME.md
+ADMIN_SETUP.md
+preview/index.html
+preview/README.md

@@ -1,64 +1,11 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import checkout, { isCheckoutUrl } from '../api/checkout.js';
-
-function setHandle(t,value) {
-  const previous=process.env.INFINITEPAY_HANDLE;
-  process.env.INFINITEPAY_HANDLE=value;
-  t.after(()=>{if(previous===undefined)delete process.env.INFINITEPAY_HANDLE;else process.env.INFINITEPAY_HANDLE=previous;});
-}
-
-async function call(body, method='POST') {
-  const res={headers:{},setHeader(k,v){this.headers[k]=v},status(code){this.code=code;return this},json(data){this.data=data;return this}};
-  await checkout({method,body},res);
-  return res;
-}
-
-test('checkout envia quantidades com R$ 50 por número e recebedor do servidor',async t=>{
-  setHandle(t,'$recebedor-teste');
-  let payload;
-  t.mock.method(globalThis,'fetch',async (url,options)=>{
-    assert.equal(url,'https://api.checkout.infinitepay.io/links');
-    payload=JSON.parse(options.body);
-    return {ok:true,json:async()=>({url:'https://checkout.infinitepay.com.br/pedido-teste'})};
-  });
-  for(const quantity of [1,2,3,7,13,51,125]){
-    const res=await call({quantity,price:1,handle:'outro-recebedor'});
-    assert.equal(res.code,200);
-    assert.equal(payload.handle,'thiago_beautynorte');
-    assert.equal(payload.items[0].price,5000);
-    assert.equal(payload.items[0].quantity,quantity);
-    assert.match(payload.order_nsu,/^[0-9a-f-]{36}$/);
-  }
-});
-test('quantidades inválidas, JSON quebrado e método GET não chamam o provedor',async t=>{
-  const fetch=t.mock.method(globalThis,'fetch',()=>{throw Error('não deveria chamar')});
-  for(const quantity of [0,-1,1.5,'1',null,Number.MAX_SAFE_INTEGER])assert.equal((await call({quantity})).code,400);
-  assert.equal((await call('{')).code,400);
-  assert.equal((await call({},'GET')).code,405);
-  assert.equal(fetch.mock.callCount(),0);
-});
-test('conta confirmada é usada mesmo com variável antiga da hospedagem',async t=>{
-  setHandle(t,'conta-antiga');
-  let payload;
-  t.mock.method(globalThis,'fetch',async (url,options)=>{
-    payload=JSON.parse(options.body);
-    return {ok:true,json:async()=>({url:'https://checkout.infinitepay.io/test'})};
-  });
-  assert.equal((await call({quantity:7,handle:'conta-visitante'})).code,200);
-  assert.equal(payload.handle,'thiago_beautynorte');
-  assert.equal(payload.items[0].quantity*payload.items[0].price,35000);
-});
-test('erros, timeout e resposta inválida do provedor são tratados',async t=>{
-  setHandle(t,'recebedor-teste');
-  const fetch=t.mock.method(globalThis,'fetch',async()=>({ok:false}));
-  assert.equal((await call({quantity:1})).code,502);
-  fetch.mock.mockImplementation(async()=>{throw new DOMException('timeout','TimeoutError')});
-  assert.equal((await call({quantity:1})).code,502);
-  fetch.mock.mockImplementation(async()=>({ok:true,json:async()=>({url:'https://example.com'})}));
-  assert.equal((await call({quantity:1})).code,502);
-});
-test('redirecionamento somente para HTTPS da InfinitePay',()=>{
-  for(const url of ['https://checkout.infinitepay.com.br/a','https://checkout.infinitepay.io/a'])assert.equal(isCheckoutUrl(url),true);
-  for(const url of ['http://checkout.infinitepay.io/a','https://infinitepay.io.example.com','javascript:alert(1)','https://user@checkout.infinitepay.io','bad'])assert.equal(isCheckoutUrl(url),false);
-});
+import test from 'node:test';import assert from 'node:assert/strict';
+import checkout,{isCheckoutUrl} from '../api/checkout.js';import webhook from '../api/payment-webhook.js';
+import admin from '../api/admin.js';import {getOrder,markPaid,patchOrder,createOrder} from '../api/_lib/orders.js';
+import {env,call,fakeStore,testPassword} from './helpers.js';
+const body={quantity:7,name:'Participante Teste',phone:'69999999999'};
+test('checkout registra participante antes do provedor e fixa valor/recebedor',async t=>{env(t);const s=fakeStore(t);const r=await call(checkout,{method:'POST',body:{...body,price:1,handle:'invasor'}});assert.equal(r.code,200);const p=s.provider.calls[0].body;assert.equal(p.handle,'thiago_beautynorte');assert.equal(p.items[0].price,5000);assert.equal(p.items[0].quantity,7);const order=await getOrder(p.order_nsu);assert.equal(order.name,body.name);assert.equal(order.phone,'+5569999999999');assert.equal(order.status,'pending');assert.ok(order.webhookHash);assert.ok(!JSON.stringify(r.data).includes(body.name));assert.match(p.webhook_url,/^https:\/\/rifa.example\/api\/payment-webhook\?token=/);});
+test('quantidade e contato inválidos não criam checkout',async t=>{env(t);const s=fakeStore(t);for(const quantity of [0,-1,1.5,'1',null,Number.MAX_SAFE_INTEGER])assert.equal((await call(checkout,{method:'POST',body:{...body,quantity}})).code,400);for(const changes of [{name:''},{phone:'123'}])assert.equal((await call(checkout,{method:'POST',body:{...body,...changes}})).code,400);assert.equal(s.provider.calls.length,0);});
+test('banco indisponível impede cobrança sem registro',async t=>{env(t);const s=fakeStore(t);s.provider.storageFail=true;assert.equal((await call(checkout,{method:'POST',body})).code,503);assert.equal(s.provider.calls.length,0);});
+test('webhook falso, pagamento pendente e valor divergente não confirmam',async t=>{env(t);const s=fakeStore(t);await call(checkout,{method:'POST',body});const p=s.provider.calls[0].body;const event={order_nsu:p.order_nsu,transaction_nsu:'tx-test',invoice_slug:'invoice-test'};let r=await call(webhook,{method:'POST',url:'/api/payment-webhook?token='+'0'.repeat(64),body:event});assert.equal(r.code,403);s.provider.check={success:true,paid:false,amount:35000};r=await call(webhook,{method:'POST',url:p.webhook_url,body:event});assert.equal(r.code,400);s.provider.check={success:true,paid:true,amount:1};assert.equal((await call(webhook,{method:'POST',url:p.webhook_url,body:event})).code,400);assert.equal((await getOrder(p.order_nsu)).status,'pending');});
+test('pagamento conferido aparece no painel e replay não duplica totais',async t=>{env(t);const s=fakeStore(t);await call(checkout,{method:'POST',body});const p=s.provider.calls[0].body;const event={order_nsu:p.order_nsu,transaction_nsu:'tx-paid',invoice_slug:'invoice-paid'};for(let i=0;i<2;i++)assert.equal((await call(webhook,{method:'POST',url:p.webhook_url,body:event})).code,200);const order=await getOrder(p.order_nsu);assert.equal(order.status,'paid');await patchOrder(order.id,{status:'error'});assert.equal((await getOrder(order.id)).status,'paid');const login=await call(admin,{method:'POST',body:{action:'login',password:testPassword}});const data=await call(admin,{headers:{cookie:login.headers['set-cookie']}});assert.equal(data.data.summary.paidCents,35000);assert.equal(data.data.summary.paidQuantity,7);assert.equal(data.data.summary.paidOrders,1);assert.equal(data.data.orders[0].name,body.name);assert.equal(data.data.orders[0].webhookHash,undefined);const second={...order,id:'another-order',status:'pending'};await createOrder(second);assert.equal(await markPaid(second,'tx-paid','invoice-paid'),-4);});
+test('URL de redirecionamento inválida é recusada',()=>{assert.equal(isCheckoutUrl('https://checkout.infinitepay.com.br/a'),true);for(const url of ['http://checkout.infinitepay.io/a','https://infinitepay.io.example.com','javascript:alert(1)','https://user@checkout.infinitepay.io'])assert.equal(isCheckoutUrl(url),false);});

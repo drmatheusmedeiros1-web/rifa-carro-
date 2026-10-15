@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {"source": "/gestao", "destination": "/api/admin-page"},
+    {"source": "/gestao/", "destination": "/api/admin-page"}
+  ],
+  "headers": [
+    {"source": "/(.*)", "headers": [
+      {"key":"X-Content-Type-Options","value":"nosniff"},
+      {"key":"Referrer-Policy","value":"strict-origin-when-cross-origin"}
+    ]}
+  ]
+}
