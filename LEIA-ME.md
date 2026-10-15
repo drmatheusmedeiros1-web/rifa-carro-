@@ -1,32 +1,23 @@
-# Rifa Solidária — como publicar
+# Rifa Solidária — Ford New Fiesta
 
-## 1. Suba o código pro GitHub
-1. Crie uma conta gratuita em https://github.com (se ainda não tiver).
-2. Clique em "New repository", dê um nome (ex: `rifa-new-fiesta`) e crie.
-3. Na página do repositório vazio, clique em "uploading an existing file".
-4. Arraste TODOS os arquivos e pastas deste zip (mantendo a pasta `api` intacta) e clique em "Commit changes".
+Página estática em `index.html`, com foto do carro, número a R$ 50,00, valor da cirurgia de R$ 150.000,00, anúncio do iPhone 17 Pro Max 256 GB aos 40% e Pix solidário.
 
-## 2. Publique na Vercel
-1. Crie uma conta gratuita em https://vercel.com (dá pra entrar direto com o GitHub).
-2. Clique em "Add New… > Project" e selecione o repositório que você acabou de criar.
-3. Não precisa mexer em nada nas configurações — clique em "Deploy".
-4. Em alguns segundos você recebe uma URL tipo `https://rifa-new-fiesta.vercel.app`.
+## Publicação
 
-## 3. Ative o banco de dados (Vercel KV)
-1. Dentro do projeto na Vercel, vá na aba "Storage".
-2. Clique em "Create Database" e escolha "KV" (ou "Upstash for Redis", é a mesma coisa).
-3. Conecte o banco ao seu projeto quando for perguntado.
-4. Vá em "Deployments" e clique em "Redeploy" pra a conexão valer.
+Importe este repositório na Vercel como site estático, sem comando de build e com a raiz como diretório de saída. A página não precisa de banco de dados.
 
-## 4. Teste antes de divulgar
-1. Abra a sua URL da Vercel.
-2. Compre 1 número de teste e veja se o checkout da InfinitePay abre.
-3. Depois de pagar, confira se a página volta mostrando a confirmação.
-4. Confira o painel do organizador (botão "Sou organizador", senha `fiesta2026`) e veja se o pedido de teste aparece.
+## Checkout externo da InfinitePay
 
-## 5. Divulgue
-Use a URL da Vercel (não precisa de domínio próprio) na bio do Instagram @beautynorte.profesional e nos posts/stories.
+Configure `checkout-config.js` com os links reais da InfinitePay para cada quantidade e total. O endereço do checkout não foi fornecido e não constava no repositório original. Enquanto não houver link válido, a página informa a indisponibilidade e não cria cobranças.
 
-## Pra trocar alguma coisa depois (WhatsApp, senha, preço, total de números)
-Edite o arquivo `api/_lib/config.js` no GitHub (dá pra editar direto pelo site, no ícone de lápis) e a Vercel republica sozinha.
-Se quiser deixar essas informações fora do código, você também pode defini-las em Vercel > Settings > Environment Variables com os nomes: `INFINITEPAY_HANDLE`, `WHATSAPP_NUMBER`, `ORG_PASSCODE`, `TOTAL_NUMBERS`, `PRICE`.
+Um link de valor fixo não muda de preço com a seleção na página: cada link deve ter o total correspondente na InfinitePay. Os dados do comprador serão informados no checkout externo, não nesta página.
+
+Este repositório não contém API, webhook, painel do organizador, distribuição de números nem confirmação automática de pagamento. As instruções antigas citavam arquivos que não estavam presentes. A implementação desses recursos não faz parte desta alteração.
+
+## Pix solidário
+
+Chave: `9518174b-547d-4b43-abdd-77111163d5d4`. Botão de cópia com alternativa de seleção manual. A transferência ocorre no aplicativo do banco, com valor livre. Doações não geram números da rifa.
+
+## Prévia
+
+`preview/index.html` permite revisar o visual e os cálculos sem redirecionar para pagamentos.
