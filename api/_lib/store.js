@@ -1,17 +1,20 @@
-export class Unavailable extends Error {}
+export class Unavailable extends Error {
+ constructor(message){super(message);if(process.env.VERCEL==='1')console.error('[rifa-config]',message);}
+}
 export function storageConfig() {
   const raw=process.env.SUPABASE_URL;
   const token=process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   try {
     const url=new URL(raw);
-    if(url.protocol!=='https:' || url.username || url.password || url.pathname!=='/' || url.search || url.hash || !token)throw Error();
+    if(url.protocol!=='https:' || url.username || url.password || url.pathname!=='/' || url.search || url.hash)throw new Unavailable('SUPABASE_URL_INVALID');
+    if(!token)throw new Unavailable('SUPABASE_SECRET_KEY_MISSING');
     // Browser/publishable keys never authorize this backend.
     if(!token.startsWith('sb_secret_')) {
-      const payload=JSON.parse(Buffer.from(token.split('.')[1]||'', 'base64url').toString());
-      if(payload.role!=='service_role')throw Error();
+      let payload;try{payload=JSON.parse(Buffer.from(token.split('.')[1]||'', 'base64url').toString());}catch{throw new Unavailable('SUPABASE_SECRET_KEY_INVALID_FORMAT');}
+      if(payload.role!=='service_role')throw new Unavailable('SUPABASE_SECRET_KEY_NOT_SERVER_KEY');
     }
     return {url:url.origin,token};
-  }catch{throw new Unavailable('Storage unavailable');}
+  }catch(error){if(error instanceof Unavailable)throw error;throw new Unavailable('Storage unavailable');}
 }
 export async function rpc(name,params={}) {
   const {url,token}=storageConfig();

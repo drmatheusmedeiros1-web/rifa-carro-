@@ -51,7 +51,7 @@ test('credencial privada só no backend, chaves públicas recusadas',async t=>{
  assert.equal(provider.databaseCalls[0].headers.apikey,'sb_secret_test_only');
  assert.equal(provider.databaseCalls[0].headers.Authorization,undefined);
  for(const key of ['', 'sb_publishable_test',`e30.${Buffer.from(JSON.stringify({role:'anon'})).toString('base64url')}.signature`]){
-  process.env.SUPABASE_SECRET_KEY=key;assert.throws(storageConfig,/Storage unavailable/);
+  process.env.SUPABASE_SECRET_KEY=key;assert.throws(storageConfig,/SUPABASE_SECRET_KEY_/);
  }
  process.env.SUPABASE_SECRET_KEY='';
  process.env.SUPABASE_SERVICE_ROLE_KEY=`e30.${Buffer.from(JSON.stringify({role:'service_role'})).toString('base64url')}.signature`;

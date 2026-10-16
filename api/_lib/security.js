@@ -29,7 +29,7 @@ let derivedPassword;
 export function passwordHash(){
  const password=process.env.ADMIN_PASSWORD;
  if(password!==undefined && password!==''){
-  if(password.length<12 || password.length>256)throw new Unavailable('Admin not configured');
+  if(password.length<12 || password.length>256)throw new Unavailable('ADMIN_PASSWORD_LENGTH_INVALID');
   // Stable per-site salt keeps sessions valid across serverless instances.
   // The plaintext secret remains only in the server environment.
   const salt=digest('rifa-admin:'+appOrigin()).slice(0,32);
