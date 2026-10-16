@@ -22,7 +22,7 @@ Habilite Checkout Integrado na conta InfinitePay. A integração segue https://w
 
 O painel em `/gestao` exige autenticação no servidor e não tem link na página pública. Exibe pedidos novos, participantes, quantidades, situação, total confirmado e progresso financeiro. O webhook consulta a InfinitePay antes de confirmar um pagamento; reenvios não duplicam os totais.
 
-**Antes de publicar**, configure banco Redis REST, `APP_ORIGIN` e hash da senha conforme [ADMIN_SETUP.md](ADMIN_SETUP.md). Sem configuração, o novo checkout e o painel ficam indisponíveis. Não coloque senhas ou tokens no código.
+**Antes de publicar**, configure banco Supabase, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `APP_ORIGIN` e hash da senha conforme [ADMIN_SETUP.md](ADMIN_SETUP.md). Sem configuração, o novo checkout e o painel ficam indisponíveis. Não coloque senhas ou tokens no código.
 
 Não implementa emissão de números individuais ou sorteio, nem importa vendas antigas. O Pix solidário não entra automaticamente no painel. Nenhuma transação real foi realizada nos testes.
 
@@ -32,4 +32,4 @@ Chave: `9518174b-547d-4b43-abdd-77111163d5d4`. O botão copia a chave; em navega
 
 ## Verificação
 
-Execute `npm test`. Para testar os scripts Lua reais, execute `node tests/orders-lua.mjs` em um ambiente com `luatex`. Os testes simulam a InfinitePay, sem criar cobranças. `preview/index.html` permite revisar o visual sem abrir pagamentos.
+Execute `npm ci` e `npm test`. Os testes executam as funções SQL em PostgreSQL local via PGlite e simulam a InfinitePay, sem criar cobranças. `preview/index.html` permite revisar o visual sem abrir pagamentos.

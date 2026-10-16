@@ -1,6 +1,6 @@
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { redis,key,takeRate,Unavailable,storageConfig } from './store.js';
+import { getSession,setSession,deleteSession,takeRate,Unavailable,storageConfig } from './store.js';
 const scrypt=promisify(scryptCallback);
 export const COOKIE='__Host-rifa_admin';
 export const SESSION_SECONDS=3600;
@@ -51,17 +51,17 @@ export function cookieToken(req){
 export async function session(req){
  authReady();
  const token=cookieToken(req);if(!token)return null;
- const raw=await redis('GET',key(`session:${digest(token)}`));
+ const raw=await getSession(digest(token));
  if(!raw)return null;
- try {const data=JSON.parse(raw);return data.expires>Date.now() && data.fingerprint===digest(passwordHash())?data:null;}catch{return null;}
+ try {const data=raw;return data.expires>Date.now() && data.fingerprint===digest(passwordHash())?data:null;}catch{return null;}
 }
 export async function createSession(res){
  const token=randomBytes(32).toString('hex');
- await redis('SET',key(`session:${digest(token)}`),JSON.stringify({expires:Date.now()+SESSION_SECONDS*1000,fingerprint:digest(passwordHash())}),'EX',SESSION_SECONDS);
+ await setSession(digest(token),{expires:Date.now()+SESSION_SECONDS*1000,fingerprint:digest(passwordHash())},SESSION_SECONDS);
  res.setHeader('Set-Cookie',`${COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_SECONDS}`);
 }
 export async function clearSession(req,res){
- const token=cookieToken(req);if(token)await redis('DEL',key(`session:${digest(token)}`));
+ const token=cookieToken(req);if(token)await deleteSession(digest(token));
  res.setHeader('Set-Cookie',`${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
 }
 export async function loginRate(req){
