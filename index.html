@@ -73,7 +73,9 @@
 <button class="choice" type="button" data-qty="50" aria-pressed="false">50</button>
 </div>
 <p class="total" aria-live="polite">Total: <strong id="total">R$ 50,00</strong></p>
-<p class="muted">Seus dados serão informados no checkout da InfinitePay.</p>
+<label for="buyer-name">Seu nome</label><input id="buyer-name" autocomplete="name" minlength="2" maxlength="100" placeholder="Nome completo" required>
+<label for="buyer-phone">Seu WhatsApp (com DDD)</label><input id="buyer-phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" placeholder="(69) 99999-9999" required>
+<p class="muted">Usaremos esses dados para identificar sua participação e entrar em contato sobre a rifa.</p>
 <button class="pay" type="button" id="pay">Pagar com InfinitePay</button>
 <p class="pay-note" id="checkout-note">O pagamento é realizado no checkout da InfinitePay.</p>
 <p class="status" id="payment-status" aria-live="polite"></p>
@@ -132,6 +134,10 @@ const payButton=root.querySelector('#pay');
 const paymentStatus=root.querySelector('#payment-status');
 payButton.addEventListener('click',async()=>{
 if(pending || !syncQuantity()) return;
+const nameInput=root.querySelector('#buyer-name');const phoneInput=root.querySelector('#buyer-phone');
+const name=nameInput.value.trim();const phone=phoneInput.value;
+if(name.length<2||!nameInput.reportValidity()||!phoneInput.reportValidity()){paymentStatus.textContent='Informe seu nome e WhatsApp com DDD.';return;}
+
 pending=true;
 payButton.disabled=true;
 payButton.setAttribute('aria-busy','true');
@@ -142,7 +148,7 @@ quantityInput.disabled=true;minus.disabled=true;plus.disabled=true;
 try {
 const response=await fetch('/api/checkout',{
 method:'POST',headers:{'Content-Type':'application/json'},
-body:JSON.stringify({quantity}),signal:AbortSignal.timeout(15000)
+body:JSON.stringify({quantity,name,phone}),signal:AbortSignal.timeout(15000)
 });
 const data=await response.json();
 if(!response.ok) throw new Error(data.error || 'Não foi possível abrir o pagamento.');
