@@ -22,7 +22,7 @@ Habilite Checkout Integrado na conta InfinitePay. A integração segue https://w
 
 O painel em `/gestao` exige autenticação no servidor e não tem link na página pública. Exibe pedidos novos, participantes, quantidades, situação, total confirmado e progresso financeiro. O webhook consulta a InfinitePay antes de confirmar um pagamento; reenvios não duplicam os totais.
 
-**Antes de publicar**, configure banco Supabase, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `APP_ORIGIN` e hash da senha conforme [ADMIN_SETUP.md](ADMIN_SETUP.md). Sem configuração, o novo checkout e o painel ficam indisponíveis. Não coloque senhas ou tokens no código.
+**Antes de publicar**, configure banco Supabase, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `APP_ORIGIN` e `ADMIN_PASSWORD` como variável secreta conforme [ADMIN_SETUP.md](ADMIN_SETUP.md). Sem configuração, o novo checkout e o painel ficam indisponíveis. Não coloque senhas ou tokens no código.
 
 Não implementa emissão de números individuais ou sorteio, nem importa vendas antigas. O Pix solidário não entra automaticamente no painel. Nenhuma transação real foi realizada nos testes.
 

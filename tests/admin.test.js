@@ -9,3 +9,23 @@ test('login, cookie seguro, sessão servidor, logout e revogação',async t=>{en
 test('sessão expirada e senha alterada invalidam acesso',async t=>{env(t);const store=await fakeStore(t);let r=await login();let cookie=r.headers['set-cookie'];await store.db.exec("update rifa_private.sessions set expires_at=now()-interval '1 second'");assert.equal((await call(admin,{headers:{cookie}})).code,401);r=await login();cookie=r.headers['set-cookie'];process.env.ADMIN_PASSWORD_HASH='scrypt$'+'a'.repeat(32)+'$'+'b'.repeat(128);assert.equal((await call(admin,{headers:{cookie}})).code,401);assert.equal(SESSION_SECONDS,3600);});
 test('origem externa, sem Origin e formulário não JSON são recusados',async t=>{env(t);await fakeStore(t);for(const origin of ['https://evil.example',undefined])assert.equal((await call(admin,{method:'POST',headers:{origin},body:{action:'login',password:testPassword}})).code,403);assert.equal((await call(admin,{method:'POST',headers:{'content-type':'text/plain'},body:'{}'})).code,400);});
 test('configuração incompleta e banco indisponível falham fechados',async t=>{env(t);const store=await fakeStore(t);delete process.env.ADMIN_PASSWORD_HASH;assert.equal((await login()).code,503);assert.equal((await call(adminPage)).code,503);process.env.ADMIN_PASSWORD_HASH='plaintext-insecure';assert.equal((await login()).code,503);process.env.ADMIN_PASSWORD_HASH=testHash;store.provider.storageFail=true;assert.equal((await login()).code,503);});
+test('senha digitada na Vercel funciona, não vaza e sua troca revoga sessões',async t=>{
+ env(t);const store=await fakeStore(t);process.env.ADMIN_PASSWORD=testPassword;
+ delete process.env.ADMIN_PASSWORD_HASH;
+ const bad=await call(admin,{method:'POST',body:{action:'login',password:'Senha incorreta 123!'}});assert.equal(bad.code,401);
+ const r=await login();assert.equal(r.code,200);const cookie=r.headers['set-cookie'];
+ assert.equal((await call(admin,{headers:{cookie}})).code,200);
+ const page=await call(adminPage,{headers:{cookie}});
+ const rows=(await store.db.query('select * from rifa_private.sessions')).rows;
+ assert.ok(!JSON.stringify({page,r,rows}).includes(testPassword));
+ const first=await import('../api/_lib/security.js');
+ const anotherInstance=await import('../api/_lib/security.js?separate-instance');
+ assert.equal(first.passwordHash(),anotherInstance.passwordHash());
+ process.env.ADMIN_PASSWORD='Outra senha exclusiva 2026!';
+ assert.equal((await call(admin,{headers:{cookie}})).code,401);
+ assert.equal((await login()).code,401);
+});
+test('senha direta curta é recusada mesmo com hash alternativo configurado',async t=>{
+ env(t);await fakeStore(t);process.env.ADMIN_PASSWORD='curta';
+ assert.equal((await login()).code,503);
+});

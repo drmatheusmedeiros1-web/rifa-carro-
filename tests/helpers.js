@@ -4,7 +4,7 @@ import {PGlite} from '@electric-sql/pglite';
 export const testPassword='Test-only password 2026!';
 const salt='b'.repeat(32);
 export const testHash=`scrypt$${salt}$${scryptSync(testPassword,salt,64,{N:32768,r:8,p:1,maxmem:64*1024*1024}).toString('hex')}`;
-export function env(t){const values={APP_ORIGIN:'https://rifa.example',SUPABASE_URL:'https://test.supabase.co',SUPABASE_SECRET_KEY:'sb_secret_test_only',SUPABASE_SERVICE_ROLE_KEY:'',ADMIN_PASSWORD_HASH:testHash,VERCEL:'0'};for(const [k,v]of Object.entries(values)){const old=process.env[k];process.env[k]=v;t.after(()=>{if(old===undefined)delete process.env[k];else process.env[k]=old;});}}
+export function env(t){const values={APP_ORIGIN:'https://rifa.example',SUPABASE_URL:'https://test.supabase.co',SUPABASE_SECRET_KEY:'sb_secret_test_only',SUPABASE_SERVICE_ROLE_KEY:'',ADMIN_PASSWORD_HASH:testHash,ADMIN_PASSWORD:'',VERCEL:'0'};for(const [k,v]of Object.entries(values)){const old=process.env[k];process.env[k]=v;t.after(()=>{if(old===undefined)delete process.env[k];else process.env[k]=old;});}}
 export async function call(handler,{method='GET',body,url='/api/admin',headers={},ip='127.0.0.1'}={}){const req={method,body,url,headers:{origin:'https://rifa.example','content-type':'application/json',...headers},socket:{remoteAddress:ip}};const res={headers:{},setHeader(k,v){this.headers[k.toLowerCase()]=v},status(n){this.code=n;return this},json(x){this.data=x;return this},send(x){this.html=x;return this},end(){return this}};await handler(req,res);return res;}
 export const migration=readFileSync(new URL('../supabase/migrations/202610160001_rifa_admin.sql',import.meta.url),'utf8');
 export async function database(t){

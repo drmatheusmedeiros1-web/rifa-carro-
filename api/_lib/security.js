@@ -1,4 +1,4 @@
-import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, scrypt as scryptCallback, scryptSync, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { getSession,setSession,deleteSession,takeRate,Unavailable,storageConfig } from './store.js';
 const scrypt=promisify(scryptCallback);
@@ -25,7 +25,22 @@ export function parseBody(req){
   if(!body || typeof body!=='object' || Array.isArray(body))throw Error('Invalid body');
   return body;
 }
+let derivedPassword;
 export function passwordHash(){
+ const password=process.env.ADMIN_PASSWORD;
+ if(password!==undefined && password!==''){
+  if(password.length<12 || password.length>256)throw new Unavailable('Admin not configured');
+  // Stable per-site salt keeps sessions valid across serverless instances.
+  // The plaintext secret remains only in the server environment.
+  const salt=digest('rifa-admin:'+appOrigin()).slice(0,32);
+  const cacheKey=digest(salt+password);
+  if(derivedPassword?.key!==cacheKey){
+   const result=scryptSync(password,salt,64,{N:32768,r:8,p:1,maxmem:64*1024*1024});
+   derivedPassword={key:cacheKey,hash:`scrypt$${salt}$${result.toString('hex')}`};
+  }
+  return derivedPassword.hash;
+ }
+
  const hash=process.env.ADMIN_PASSWORD_HASH||'';
  if(!/^scrypt\$[a-f0-9]{32}\$[a-f0-9]{128}$/.test(hash))throw new Unavailable('Admin not configured');
  return hash;
