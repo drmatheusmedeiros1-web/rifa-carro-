@@ -22,9 +22,13 @@ export async function rpc(name,params={}) {
   if(!token.startsWith('sb_secret_'))headers.Authorization=`Bearer ${token}`;
   try {
     const response=await fetch(`${url}/rest/v1/rpc/${name}`,{method:'POST',headers,body:JSON.stringify(params),signal:AbortSignal.timeout(8000)});
-    if(!response.ok)throw Error();
+    if(!response.ok){
+      let details;try{details=await response.json();}catch{}
+      const code=typeof details?.code==='string' && /^[A-Z0-9_]{1,32}$/.test(details.code)?details.code:'UNKNOWN';
+      throw new Unavailable(`SUPABASE_RPC_HTTP_${response.status}_${code}`);
+    }
     return await response.json();
-  }catch{throw new Unavailable('Storage unavailable');}
+  }catch(error){if(error instanceof Unavailable)throw error;throw new Unavailable('SUPABASE_RPC_NETWORK_ERROR');}
 }
 export async function takeRate(bucket,limit,seconds){return await rpc('rifa_take_rate',{p_bucket:bucket,p_limit:limit,p_seconds:seconds})===true;}
 export const getSession=hash=>rpc('rifa_session_get',{p_hash:hash});
