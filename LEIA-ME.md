@@ -1,6 +1,6 @@
 # Rifa Solidária — Ford New Fiesta
 
-Página com foto do carro, número a R$ 50,00, valor da cirurgia de R$ 150.000,00, anúncio do iPhone 17 Pro Max 256 GB aos 40% e Pix solidário. Textos pretos sobre fundos claros, inclusive botões e seleção de quantidade.
+Página com foto do carro, número a R$ 50,00, valor da cirurgia de R$ 150.000,00, prêmios aos 30% (MacBook Air 2019), 60% (iPhone 18 Pro Max 512 GB) e 100% (New Fiesta Hatch 1.6 SE 2013/2014) das rifas vendidas e Pix solidário. Textos pretos sobre fundos claros, inclusive botões e seleção de quantidade.
 
 ## Checkout automático da InfinitePay
 
