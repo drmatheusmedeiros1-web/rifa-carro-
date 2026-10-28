@@ -12,7 +12,7 @@ export async function database(t){
  await db.exec('create role anon; create role authenticated; create role service_role;');
  // Reproduce Supabase's default public function grants to check their revocation.
  await db.exec('alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;');
- await db.exec(migration);return db;
+ await db.exec(migration);await db.exec(readFileSync(new URL('../supabase/migrations/202610280001_ticket_numbers.sql',import.meta.url),'utf8'));return db;
 }
 export async function fakeStore(t){
  const db=await database(t);

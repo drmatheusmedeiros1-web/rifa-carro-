@@ -1,5 +1,5 @@
 import {headers,authReady,sameOrigin,parseBody,verifyPassword,loginRate,session,createSession,clearSession} from './_lib/security.js';
-import {listOrders} from './_lib/orders.js';
+import {listOrders,findTicket} from './_lib/orders.js';
 export default async function admin(req,res){
  headers(res);
  try{
@@ -7,6 +7,8 @@ export default async function admin(req,res){
   if(req.method==='GET'){
    if(!await session(req))return res.status(401).json({error:'Faça login para continuar.'});
    const url=new URL(req.url,'https://local.invalid');
+   const ticket=url.searchParams.get('ticket');
+   if(ticket){if(!/^[0-9]{1,15}$/.test(ticket)||Number(ticket)<1)return res.status(400).json({error:'Número inválido.'});return res.status(200).json(await findTicket(Number(ticket)));}
    const status=url.searchParams.get('status')||'all';
    const page=Number(url.searchParams.get('page')||0);
    if(!['all','pending','paid','error'].includes(status)||!Number.isSafeInteger(page)||page<0||page>100000)return res.status(400).json({error:'Filtro inválido.'});

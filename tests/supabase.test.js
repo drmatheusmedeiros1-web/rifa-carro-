@@ -6,7 +6,7 @@ const sample={id:'00000000-0000-4000-8000-000000000001',name:'Teste SQL',phone:'
 test('SQL reaplicável, RLS e RPC bloqueadas para visitantes e usuários comuns',async t=>{
  const db=await database(t);await db.exec(migration);
  const functions=await db.query("select p.oid, p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'rifa_%'");
- assert.equal(functions.rows.length,9);
+ assert.equal(functions.rows.length,11);
  for(const role of ['anon','authenticated']){
   for(const fn of functions.rows){const r=await db.query('select has_function_privilege($1,$2::oid,\'EXECUTE\') as allowed',[role,fn.oid]);assert.equal(r.rows[0].allowed,false,role+' '+fn.proname);}
   await db.exec(`set role ${role}`);
@@ -16,7 +16,7 @@ test('SQL reaplicável, RLS e RPC bloqueadas para visitantes e usuários comuns'
   await db.exec('reset role');
  }
  const tables=await db.query("select relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='rifa_private' and c.relkind='r'");
- assert.equal(tables.rows.length,3);assert.ok(tables.rows.every(r=>r.relrowsecurity));
+ assert.equal(tables.rows.length,4);assert.ok(tables.rows.every(r=>r.relrowsecurity));
  await db.exec('set role service_role');
  await assert.rejects(db.query('select * from rifa_private.orders'),/permission denied/);
  assert.equal((await db.query("select public.rifa_orders_list('all',0) as data")).rows[0].data.total,0);
