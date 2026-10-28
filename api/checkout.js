@@ -36,14 +36,15 @@ export default async function checkout(req, res) {
   const handle=getInfinitePayHandle();
   const id=randomUUID();
   const webhookToken=randomBytes(32).toString('hex');
-  const order={id,name,phone:'+'+phone,quantity,amountCents:quantity*PRICE_CENTS,status:'creating',createdAt:Date.now(),webhookHash:digest(webhookToken)};
+  const receiptToken=randomBytes(32).toString('hex');
+  const order={id,name,phone:'+'+phone,quantity,amountCents:quantity*PRICE_CENTS,status:'creating',createdAt:Date.now(),webhookHash:digest(webhookToken),receiptHash:digest(receiptToken)};
   try {await createOrder(order);}catch{return res.status(503).json({error:'Não foi possível registrar seu pedido. Tente novamente.'});}
   // Preço e conta recebedora vêm do servidor, nunca dos dados enviados pelo visitante.
   const payload = {
     handle,
     order_nsu: id,
     webhook_url: `${origin}/api/payment-webhook?token=${webhookToken}`,
-    redirect_url: `${origin}/obrigado.html`,
+    redirect_url: `${origin}/obrigado.html?pedido=${id}#token=${receiptToken}`,
     customer: {name,phone_number:'+'+phone},
     items: [{ quantity, price: PRICE_CENTS, description: 'Rifa Solidária — Ford New Fiesta 2013/2014' }],
   };
