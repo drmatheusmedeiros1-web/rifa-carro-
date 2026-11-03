@@ -20,7 +20,11 @@ export default async function paymentWebhook(req,res){
   if(!response.ok)return res.status(400).json({error:'Confirmação indisponível. Reenviar evento.'});
   const verification=await response.json();
   if(verification.success!==true||verification.paid!==true||verification.amount!==order.amountCents)return res.status(400).json({error:'Pagamento ainda não confirmado para este pedido.'});
+  // Uma aprovação manual já emitiu as cotas. Confirmações posteriores do provedor
+  // são conferidas acima, mas não substituem o histórico nem emitem novas cotas.
+  if(order.status==='paid'&&order.transaction==='manual-'+order.id)return res.status(200).json({ok:true});
   const result=await markPaid(order,transaction,slug);
+  if(result===-2){const current=await getOrder(id);if(current?.status==='paid'&&current.transaction==='manual-'+id)return res.status(200).json({ok:true});}
   if(result<0)return res.status(400).json({error:'Evento incompatível com o pedido.'});
   return res.status(200).json({ok:true});
  }catch{return res.status(400).json({error:'Confirmação indisponível. Reenviar evento.'});}
