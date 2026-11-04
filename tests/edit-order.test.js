@@ -1,0 +1,23 @@
+import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync} from 'node:fs';
+import {env,fakeStore,call,testPassword} from './helpers.js';import admin from '../api/admin.js';import checkout from '../api/checkout.js';import {page} from '../api/_lib/admin-view.js';
+test('editar quatro para três e aprovar emite somente três números; protege sessão, concorrência e histórico',async t=>{
+ env(t);const {db,provider}=await fakeStore(t);await call(checkout,{method:'POST',body:{name:'Teste edição',phone:'69999999999',quantity:4}});
+ const id=provider.calls[0].body.order_nsu;const login=await call(admin,{method:'POST',body:{action:'login',password:testPassword}}),headers={cookie:login.headers['set-cookie']};
+ const body={action:'edit_order',id,quantity:3,expectedQuantity:4,confirmed:true};
+ assert.equal((await call(admin,{method:'POST',body})).code,401);
+ assert.equal((await call(admin,{method:'POST',body,headers:{...headers,origin:'https://evil.example'}})).code,403);
+ for(const quantity of [0,-1,1.5,'3',Number.MAX_SAFE_INTEGER])assert.equal((await call(admin,{method:'POST',body:{...body,quantity},headers})).code,400);
+ assert.equal((await call(admin,{method:'POST',body:{...body,confirmed:false},headers})).code,400);
+ assert.equal((await call(admin,{method:'POST',body,headers})).code,200);
+ assert.equal((await call(admin,{method:'POST',body,headers})).code,409);
+ let row=(await db.query('select * from rifa_private.orders')).rows[0];assert.equal(Number(row.quantity),3);assert.equal(Number(row.amount_cents),15000);assert.equal(row.ticket_start,null);assert.equal(row.status,'pending');assert.equal(row.quantity_changes[0].from,4);assert.equal(row.quantity_changes[0].to,3);
+ const approve={action:'approve_payment',id,amountCents:20000,confirmed:true};assert.equal((await call(admin,{method:'POST',body:approve,headers})).code,409);
+ assert.equal((await call(admin,{method:'POST',body:{...approve,amountCents:15000},headers})).code,200);
+ row=(await db.query('select * from rifa_private.orders')).rows[0];assert.equal(Number(row.ticket_start),1);assert.equal(Number(row.ticket_end),3);assert.equal(row.status,'paid');
+ assert.equal((await call(admin,{method:'POST',body:{...body,quantity:2,expectedQuantity:3},headers})).code,409);
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("select has_function_privilege($1,'public.rifa_order_edit(uuid,bigint,bigint)','execute') as allowed",[role])).rows[0].allowed,false);
+ await db.exec(readFileSync(new URL('../supabase/migrations/202611040002_edit_order.sql',import.meta.url),'utf8'));
+ await call(checkout,{method:'POST',body:{name:'Teste cancelado',phone:'69999999999',quantity:4}});const other=provider.calls.at(-1).body.order_nsu;
+ await call(admin,{method:'POST',body:{action:'cancel_order',id:other,confirmed:true},headers});assert.equal((await call(admin,{method:'POST',body:{...body,id:other},headers})).code,409);
+});
+test('botão editar e scripts válidos',()=>{const html=page('test',true);assert.match(html,/Editar pedido/);for(const m of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g))new vm.Script(m[1]);});

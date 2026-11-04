@@ -1,5 +1,5 @@
 import {headers,authReady,sameOrigin,parseBody,verifyPassword,loginRate,session,createSession,clearSession} from './_lib/security.js';
-import {listOrders,findTicket,getOrder,markPaid,cancelOrder} from './_lib/orders.js';
+import {listOrders,findTicket,getOrder,markPaid,cancelOrder,editOrder} from './_lib/orders.js';
 export default async function admin(req,res){
  headers(res);
  try{
@@ -21,6 +21,15 @@ export default async function admin(req,res){
    if(!await loginRate(req)){res.setHeader('Retry-After','900');return res.status(429).json({error:'Muitas tentativas. Aguarde 15 minutos.'});}
    if(!await verifyPassword(body.password))return res.status(401).json({error:'Não foi possível entrar. Confira a senha.'});
    await clearSession(req,res);await createSession(res);
+   return res.status(200).json({ok:true});
+  }
+  if(body.action==='edit_order'){
+   if(!await session(req))return res.status(401).json({error:'Faça login para continuar.'});
+   if(body.confirmed!==true||typeof body.id!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(body.id)||!Number.isSafeInteger(body.quantity)||body.quantity<1||!Number.isSafeInteger(body.quantity*5000)||!Number.isSafeInteger(body.expectedQuantity)||body.expectedQuantity<1)return res.status(400).json({error:'Informe uma quantidade inteira válida e confirme a alteração.'});
+   const result=await editOrder(body.id,body.quantity,body.expectedQuantity);
+   if(result===-1)return res.status(404).json({error:'Pedido não encontrado.'});
+   if(result===-2)return res.status(409).json({error:'Pedidos pagos ou cancelados não podem ser editados.'});
+   if(result<0)return res.status(409).json({error:'O pedido foi alterado. Atualize o painel antes de editar.'});
    return res.status(200).json({ok:true});
   }
   if(body.action==='cancel_order'){
