@@ -12,3 +12,5 @@ export const listOrders=(status,page)=>rpc('rifa_orders_list',{p_status:status,p
 export const findTicket=number=>rpc('rifa_orders_find',{p_ticket:number});
 
 export const cancelOrder=id=>rpc('rifa_order_cancel',{p_id:id});
+
+export const editOrder=(id,quantity,expectedQuantity)=>rpc('rifa_order_edit',{p_id:id,p_quantity:quantity,p_expected_quantity:expectedQuantity});

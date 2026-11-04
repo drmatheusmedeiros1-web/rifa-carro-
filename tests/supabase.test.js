@@ -6,7 +6,7 @@ const sample={id:'00000000-0000-4000-8000-000000000001',name:'Teste SQL',phone:'
 test('SQL reaplicável, RLS e RPC bloqueadas para visitantes e usuários comuns',async t=>{
  const db=await database(t);await db.exec(migration);
  const functions=await db.query("select p.oid, p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'rifa_%'");
- assert.equal(functions.rows.length,12);
+ assert.equal(functions.rows.length,13);
  for(const role of ['anon','authenticated']){
   for(const fn of functions.rows){const r=await db.query('select has_function_privilege($1,$2::oid,\'EXECUTE\') as allowed',[role,fn.oid]);assert.equal(r.rows[0].allowed,false,role+' '+fn.proname);}
   await db.exec(`set role ${role}`);
