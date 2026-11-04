@@ -1,5 +1,5 @@
 import {headers,authReady,sameOrigin,parseBody,verifyPassword,loginRate,session,createSession,clearSession} from './_lib/security.js';
-import {listOrders,findTicket,getOrder,markPaid} from './_lib/orders.js';
+import {listOrders,findTicket,getOrder,markPaid,cancelOrder} from './_lib/orders.js';
 export default async function admin(req,res){
  headers(res);
  try{
@@ -11,7 +11,7 @@ export default async function admin(req,res){
    if(ticket){if(!/^[0-9]{1,15}$/.test(ticket)||Number(ticket)<1)return res.status(400).json({error:'Número inválido.'});return res.status(200).json(await findTicket(Number(ticket)));}
    const status=url.searchParams.get('status')||'all';
    const page=Number(url.searchParams.get('page')||0);
-   if(!['all','pending','paid','error'].includes(status)||!Number.isSafeInteger(page)||page<0||page>100000)return res.status(400).json({error:'Filtro inválido.'});
+   if(!['all','pending','paid','error','cancelled'].includes(status)||!Number.isSafeInteger(page)||page<0||page>100000)return res.status(400).json({error:'Filtro inválido.'});
    return res.status(200).json(await listOrders(status,page));
   }
   if(req.method!=='POST'){res.setHeader('Allow','GET, POST');return res.status(405).json({error:'Método não permitido.'});}
@@ -23,11 +23,20 @@ export default async function admin(req,res){
    await clearSession(req,res);await createSession(res);
    return res.status(200).json({ok:true});
   }
+  if(body.action==='cancel_order'){
+   if(!await session(req))return res.status(401).json({error:'Faça login para continuar.'});
+   if(body.confirmed!==true||typeof body.id!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(body.id))return res.status(400).json({error:'Confirme o cancelamento do pedido.'});
+   const result=await cancelOrder(body.id);
+   if(result===-1)return res.status(404).json({error:'Pedido não encontrado.'});
+   if(result<0)return res.status(409).json({error:'Pedidos pagos não podem ser cancelados.'});
+   return res.status(200).json({ok:true,alreadyCancelled:result===0});
+  }
   if(body.action==='approve_payment'){
    if(!await session(req))return res.status(401).json({error:'Faça login para continuar.'});
    if(body.confirmed!==true||typeof body.id!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(body.id))return res.status(400).json({error:'Confirme o recebimento antes de aprovar.'});
    const order=await getOrder(body.id);
    if(!order)return res.status(404).json({error:'Pedido não encontrado.'});
+   if(order.status==='cancelled')return res.status(409).json({error:'Este pedido foi cancelado.'});
    if(body.amountCents!==order.amountCents)return res.status(409).json({error:'O valor não corresponde ao pedido. Atualize o painel.'});
    if(order.status==='paid')return res.status(200).json({ok:true,alreadyPaid:true});
    // Identificador determinístico registra a aprovação administrativa no histórico
