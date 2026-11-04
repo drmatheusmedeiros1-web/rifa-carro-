@@ -10,3 +10,5 @@ export const markPaid=(order,transaction,slug)=>rpc('rifa_order_paid',{p_id:orde
 export const listOrders=(status,page)=>rpc('rifa_orders_list',{p_status:status,p_page:page});
 
 export const findTicket=number=>rpc('rifa_orders_find',{p_ticket:number});
+
+export const cancelOrder=id=>rpc('rifa_order_cancel',{p_id:id});

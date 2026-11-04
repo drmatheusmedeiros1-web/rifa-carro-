@@ -1,0 +1,31 @@
+import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync} from 'node:fs';
+import {env,fakeStore,call,testPassword} from './helpers.js';import admin from '../api/admin.js';import checkout from '../api/checkout.js';import webhook from '../api/payment-webhook.js';import {page} from '../api/_lib/admin-view.js';
+test('cancelamento autenticado, idempotente, sem apagar histórico; pagamento confirmado prevalece',async t=>{
+ env(t);const {db,provider}=await fakeStore(t);
+ await call(checkout,{method:'POST',body:{name:'Teste cancelamento',phone:'69999999999',quantity:2}});
+ const payment=provider.calls[0].body,id=payment.order_nsu,body={action:'cancel_order',id,confirmed:true};
+ const login=await call(admin,{method:'POST',body:{action:'login',password:testPassword}}),headers={cookie:login.headers['set-cookie']};
+ assert.equal((await call(admin,{method:'POST',body})).code,401);
+ assert.equal((await call(admin,{method:'POST',body,headers:{...headers,origin:'https://evil.example'}})).code,403);
+ assert.equal((await call(admin,{method:'POST',body:{...body,confirmed:false},headers})).code,400);
+ assert.equal((await call(admin,{method:'POST',body,headers})).code,200);
+ assert.equal((await call(admin,{method:'POST',body,headers})).data.alreadyCancelled,true);
+ await db.query("select public.rifa_order_patch($1,'pending')",[id]);
+ const row=(await db.query('select * from rifa_private.orders')).rows[0];assert.equal(row.status,'cancelled');assert.ok(row.cancelled_at);assert.equal(row.ticket_start,null);
+ const list=await call(admin,{url:'/api/admin?status=cancelled',headers});assert.equal(list.data.total,1);assert.equal(list.data.summary.paidCents,0);
+ assert.equal((await call(admin,{method:'POST',headers,body:{action:'approve_payment',id,confirmed:true,amountCents:10000}})).code,409);
+ assert.equal((await db.query("select public.rifa_order_paid($1,$2,10000,'manual-admin') as result",[id,'manual-'+id])).rows[0].result,-5);
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("select has_function_privilege($1,'public.rifa_order_cancel(uuid)','execute') as allowed",[role])).rows[0].allowed,false);
+ provider.check={success:true,paid:true,amount:10000};
+ const event={order_nsu:id,transaction_nsu:'late-payment',invoice_slug:'paid-invoice'};
+ assert.equal((await call(webhook,{method:'POST',url:payment.webhook_url,body:event})).code,200);
+ assert.equal((await call(admin,{method:'POST',body,headers})).code,409);
+ assert.equal((await call(webhook,{method:'POST',url:payment.webhook_url,body:event})).code,200);
+ const paid=(await db.query('select * from rifa_private.orders')).rows[0];assert.equal(paid.status,'paid');assert.equal(Number(paid.ticket_start),1);assert.equal(Number(paid.ticket_end),2);
+ await db.exec(readFileSync(new URL('../supabase/migrations/202611040001_cancel_order.sql',import.meta.url),'utf8'));
+ assert.equal((await db.query('select count(*) as n from rifa_private.orders')).rows[0].n,1);
+});
+test('scripts válidos, cancelamento com confirmação e recibo com estado cancelado',()=>{
+ for(const html of [page('test',true),readFileSync(new URL('../obrigado.html',import.meta.url),'utf8')])for(const m of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g))new vm.Script(m[1]);
+ assert.match(page('test',true),/Cancelar pedido/);assert.match(page('test',true),/cancel_order/);
+});
